@@ -1,4 +1,4 @@
-"""Лимиты одного вызова. Меняются только вместе с README и tests/test_limits.py."""
+"""Лимиты одного вызова. Меняются только вместе с README и tests/test_server.py."""
 
 MAX_FILE_BYTES = 20 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 80 * 1024 * 1024
@@ -9,4 +9,12 @@ MAX_SHEETS = 10
 MAX_ROWS = 2_000
 MAX_COLS = 40
 MAX_PDF_PAGES = 50
+MAX_IMAGE_PIXELS = 16_000_000
+MAX_IMAGE_EDGE = 8_000
+MAX_IMAGE_INLINE_BYTES = 2 * 1024 * 1024
+MAX_IMAGE_ITEMS = 200
+TABLE_PREVIEW_ROWS = 30
+MAX_TABLE_OPS = 30
+MAX_VALUE_COUNTS = 20
+MAX_EXPR_CHARS = 500
 CALL_TIMEOUT_SECONDS = 20.0

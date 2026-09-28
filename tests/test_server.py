@@ -14,10 +14,18 @@ from coding_mcp.limits import (
     MAX_FILE_BYTES,
     MAX_INPUT_CHARS,
     MAX_OUTPUT_CHARS,
+    MAX_EXPR_CHARS,
+    MAX_IMAGE_EDGE,
+    MAX_IMAGE_INLINE_BYTES,
+    MAX_IMAGE_ITEMS,
+    MAX_IMAGE_PIXELS,
     MAX_PDF_PAGES,
     MAX_ROWS,
     MAX_SHEETS,
+    MAX_TABLE_OPS,
     MAX_UNCOMPRESSED_BYTES,
+    MAX_VALUE_COUNTS,
+    TABLE_PREVIEW_ROWS,
 )
 from coding_mcp.server import TOOL_NAMES, create_server
 
@@ -34,6 +42,14 @@ def test_documented_limits() -> None:
     assert MAX_ROWS == 2_000
     assert MAX_COLS == 40
     assert MAX_PDF_PAGES == 50
+    assert MAX_IMAGE_PIXELS == 16_000_000
+    assert MAX_IMAGE_EDGE == 8_000
+    assert MAX_IMAGE_INLINE_BYTES == 2 * 1024 * 1024
+    assert MAX_IMAGE_ITEMS == 200
+    assert TABLE_PREVIEW_ROWS == 30
+    assert MAX_TABLE_OPS == 30
+    assert MAX_VALUE_COUNTS == 20
+    assert MAX_EXPR_CHARS == 500
     assert CALL_TIMEOUT_SECONDS == 20.0
 
 
@@ -47,7 +63,7 @@ def test_registered_tools_match_documentation(tmp_path: Path) -> None:
 def test_office_libraries_are_not_imported_at_startup() -> None:
     code = (
         "import coding_mcp.server, sys\n"
-        "names = {'pypdf', 'docx', 'openpyxl', 'xlrd'}\n"
+        "names = {'pypdf', 'docx', 'openpyxl', 'xlrd', 'pandas', 'numpy', 'PIL'}\n"
         "found = [name for name in sys.modules if name.split('.')[0] in names]\n"
         "print(','.join(found))\n"
     )

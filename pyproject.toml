@@ -1,12 +1,14 @@
 [project]
 name = "coding-mcp"
 version = "0.1.0"
-description = "Stdio MCP для pdf, docx, xlsx и xls внутри MCP_USER_WORKDIR"
+description = "Stdio MCP для документов, картинок и таблиц внутри MCP_USER_WORKDIR"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=1.28,<2",
     "openpyxl>=3.1.5",
+    "pandas>=2.2",
+    "pillow>=11",
     "pypdf>=5.1",
     "python-docx>=1.1.2",
     "xlrd>=2.0.1",

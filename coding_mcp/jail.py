@@ -54,9 +54,24 @@ def resolve_in_root(root: Path, raw: str) -> Path:
 
 
 def open_for_read(root: Path, raw: str, suffix: str) -> Path:
+    return _open_existing(root, raw, frozenset({suffix}))
+
+
+def open_for_read_types(root: Path, raw: str, suffixes: frozenset[str]) -> Path:
+    return _open_existing(root, raw, suffixes)
+
+
+def prepare_write(root: Path, raw: str, suffix: str) -> Path:
+    return _prepare_write(root, raw, frozenset({suffix}))
+
+
+def prepare_write_types(root: Path, raw: str, suffixes: frozenset[str]) -> Path:
+    return _prepare_write(root, raw, suffixes)
+
+
+def _open_existing(root: Path, raw: str, suffixes: frozenset[str]) -> Path:
     path = resolve_in_root(root, raw)
-    if path.suffix.lower() != suffix:
-        raise DocumentError(f"Ожидается файл {suffix}.")
+    _require_suffix(path, suffixes)
     if not path.is_file():
         raise DocumentError("Файл не найден.")
     try:
@@ -70,10 +85,9 @@ def open_for_read(root: Path, raw: str, suffix: str) -> Path:
     return path
 
 
-def prepare_write(root: Path, raw: str, suffix: str) -> Path:
+def _prepare_write(root: Path, raw: str, suffixes: frozenset[str]) -> Path:
     path = resolve_in_root(root, raw)
-    if path.suffix.lower() != suffix:
-        raise DocumentError(f"Ожидается файл {suffix}.")
+    _require_suffix(path, suffixes)
     if path.exists() and not path.is_file():
         raise DocumentError("Путь указывает на каталог.")
     parent = path.parent
@@ -87,6 +101,15 @@ def prepare_write(root: Path, raw: str, suffix: str) -> Path:
     if resolved.exists() and not resolved.is_file():
         raise DocumentError("Путь указывает на каталог.")
     return resolved
+
+
+def _require_suffix(path: Path, suffixes: frozenset[str]) -> None:
+    if path.suffix.lower() in suffixes:
+        return
+    if len(suffixes) == 1:
+        raise DocumentError(f"Ожидается файл {next(iter(suffixes))}.")
+    shown = ", ".join(sorted(suffixes))
+    raise DocumentError(f"Ожидается файл {shown}.")
 
 
 def relative_name(root: Path, path: Path) -> str:

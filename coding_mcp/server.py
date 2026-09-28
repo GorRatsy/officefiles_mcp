@@ -1,4 +1,4 @@
-"""Stdio MCP. В tools/list только чтение и запись файлов рабочей директории."""
+"""Stdio MCP. Чтение и создание файлов рабочей директории, картинок и таблиц."""
 
 from __future__ import annotations
 
@@ -10,12 +10,14 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Image
 
 from coding_mcp.documents import read_docx, read_pdf, read_xls, read_xlsx, write_docx, write_xlsx
 from coding_mcp.errors import DocumentError
+from coding_mcp.images import read_image, write_image
 from coding_mcp.jail import load_root, scrub_environment
 from coding_mcp.runtime import run_bounded
+from coding_mcp.tables import analyze_table, calculate_table, read_table, write_table
 
 INSTRUCTIONS = """\
 Рабочая директория уже выбрана. Передавай только относительные пути внутри неё, например report.pdf или out/table.xlsx.
@@ -26,7 +28,13 @@ write_docx — записать DOCX. Строка "# Заголовок" ста
 read_xlsx — листы XLSX, ячейки через табуляцию. Формула возвращается текстом, без пересчёта значения.
 write_xlsx — записать XLSX. content: {"sheets":[{"name":"Лист1","rows":[["Имя",1],["Анна",2]]}]}.
 read_xls — чтение старого XLS. Записи XLS нет.
-Не поддерживаются doc, ppt, pptx, список каталога, сеть и запуск кода.\
+read_image — показать PNG, JPEG, GIF, WEBP или BMP: размер, режим и сама картинка.
+write_image — создать картинку или перекодировать source. spec: {"width":640,"height":480,"background":"#FFFFFF","items":[{"kind":"rectangle","x":10,"y":10,"width":100,"height":40,"fill":"#336699"},{"kind":"text","x":20,"y":60,"text":"Отчёт","size":32}]}.
+read_table — прочитать CSV, TSV, XLSX или XLS через pandas: размер, типы, пропуски и первые строки.
+analyze_table — сводка pandas. spec может содержать describe, missing, value_counts, corr и groupby: {"by":["region"],"agg":{"amount":"sum"}}.
+calculate_table — шаги filter, derive, sort, select, aggregate, rename, fillna, dropna, head. derive считает только арифметику по столбцам, например amount * 0.2. output сохраняет CSV, TSV или XLSX.
+write_table — создать CSV, TSV или XLSX. content: {"columns":["Имя","Сумма"],"rows":[["Анна",2]]}.
+Не поддерживаются doc, ppt, pptx, список каталога, сеть и произвольный код.\
 """
 
 TOOL_NAMES = (
@@ -36,6 +44,12 @@ TOOL_NAMES = (
     "read_xlsx",
     "write_xlsx",
     "read_xls",
+    "read_image",
+    "write_image",
+    "read_table",
+    "analyze_table",
+    "calculate_table",
+    "write_table",
 )
 
 log = logging.getLogger("coding_mcp")
@@ -79,6 +93,59 @@ def create_server(root: Path) -> FastMCP:
         """Прочитать старый XLS. path — относительный путь. sheet — имя листа; без него читаются первые листы. Записи нет."""
 
         return _call(lambda: read_xls(root, path, sheet))
+
+    @mcp.tool(name="read_image", structured_output=False)
+    def read_image_tool(path: str):
+        """Показать PNG, JPEG, GIF, WEBP или BMP. path — относительный путь, например photo.png."""
+
+        def run():
+            payload = read_image(root, path)
+            if payload.data is None or payload.image_format is None:
+                return payload.text
+            return payload.text, Image(data=payload.data, format=payload.image_format)
+
+        return _call(run)
+
+    @mcp.tool(name="write_image")
+    def write_image_tool(path: str, spec: dict | str) -> str:
+        """Создать PNG, JPEG, GIF, WEBP или BMP. spec — width, height, background и items (rectangle, ellipse, line, text, bars). source копирует существующую картинку."""
+
+        return _call(lambda: write_image(root, path, spec))
+
+    @mcp.tool(name="read_table")
+    def read_table_tool(path: str, sheet: str | None = None, header: bool = True) -> str:
+        """Прочитать CSV, TSV, XLSX или XLS через pandas: число строк, типы столбцов, пропуски и первые строки."""
+
+        return _call(lambda: read_table(root, path, sheet, header))
+
+    @mcp.tool(name="analyze_table")
+    def analyze_table_tool(
+        path: str,
+        spec: dict | str | None = None,
+        sheet: str | None = None,
+        header: bool = True,
+    ) -> str:
+        """Посчитать сводку pandas: describe, пропуски, value_counts, corr или groupby. Без spec — пропуски и describe."""
+
+        return _call(lambda: analyze_table(root, path, spec, sheet, header))
+
+    @mcp.tool(name="calculate_table")
+    def calculate_table_tool(
+        path: str,
+        operations: list | str,
+        sheet: str | None = None,
+        header: bool = True,
+        output: str | None = None,
+    ) -> str:
+        """Преобразовать таблицу шагами filter, derive, sort, select, aggregate, rename, fillna, dropna, head. output — куда записать CSV, TSV или XLSX."""
+
+        return _call(lambda: calculate_table(root, path, operations, sheet, header, output))
+
+    @mcp.tool(name="write_table")
+    def write_table_tool(path: str, content: dict | str) -> str:
+        """Создать CSV, TSV или XLSX. content — {"columns":["Имя","Сумма"],"rows":[["Анна",2]]} или sheets для нескольких листов XLSX."""
+
+        return _call(lambda: write_table(root, path, content))
 
     return mcp
 
